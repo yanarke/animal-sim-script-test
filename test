@@ -1,26 +1,33 @@
--- LocalScript (StarterGui)
+-- LocalScript -> StarterGui
 repeat task.wait() until game:IsLoaded()
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+-- Nom exact du RemoteEvent (celui que tu as trouvé)
 local REMOTE_NAME = "jdskhfsIIIllliiIIIdchgdIiIIIlIlIli"
 local remote = ReplicatedStorage:WaitForChild(REMOTE_NAME, 10)
 if not remote then
-    warn("RemoteEvent '"..REMOTE_NAME.."' introuvable dans ReplicatedStorage")
+    warn("Remote introuvable: "..REMOTE_NAME)
     return
 end
 
--- Optional: path to the Dummy you showed earlier (change if different)
+-- Fonction utilitaire pour retrouver l'humanoid du Dummy (adapter le chemin si nécessaire)
 local function findDummyHumanoid()
-    -- essaie de retrouver le Dummy utilisé dans ton snippet
-    local ok, map = pcall(function() return Workspace:WaitForChild("MAP",1) end)
+    local ok, map = pcall(function() return Workspace:FindFirstChild("MAP") end)
     if not ok or not map then return nil end
-    local ok2, dummies = pcall(function() return map:FindFirstChild("5k_dummies") end)
-    if not ok2 or not dummies then return nil end
+    local dummies = map:FindFirstChild("5k_dummies") or map:FindFirstChild("5k_dummy") or map:FindFirstChild("Dummies")
+    if not dummies then 
+        -- fallback : cherche un objet nommé "Dummy2" n'importe où dans Workspace
+        local fallback = Workspace:FindFirstChild("Dummy2", true)
+        if fallback and fallback:FindFirstChildOfClass("Humanoid") then
+            return fallback:FindFirstChildOfClass("Humanoid")
+        end
+        return nil
+    end
     local dummy = dummies:FindFirstChild("Dummy2") or dummies:GetChildren()[1]
     if dummy and dummy:FindFirstChildOfClass("Humanoid") then
         return dummy:FindFirstChildOfClass("Humanoid")
@@ -28,146 +35,178 @@ local function findDummyHumanoid()
     return nil
 end
 
--- UI (simple)
+local function getLocalHumanoid()
+    local ch = player.Character or player.CharacterAdded:Wait()
+    return ch and ch:FindFirstChildOfClass("Humanoid")
+end
+
+-- UI simple
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ReliableKillGUI"
+screenGui.Name = "ServerKillGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 300, 0, 140)
-frame.Position = UDim2.new(0.5, -150, 0.5, -70)
+frame.Size = UDim2.new(0, 320, 0, 150)
+frame.Position = UDim2.new(0.5, -160, 0.5, -75)
 frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
+frame.BorderSizePixel = 1
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,24)
+title.Size = UDim2.new(1,0,0,26)
+title.Position = UDim2.new(0,0,0,0)
 title.BackgroundTransparency = 1
-title.Text = "Kill (Remote: "..REMOTE_NAME..")"
+title.Text = "Kill via Remote (envoi exact)"
 title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 16
 
 local status = Instance.new("TextLabel", frame)
 status.Size = UDim2.new(1,-10,0,20)
-status.Position = UDim2.new(0,5,0,28)
+status.Position = UDim2.new(0,5,0,30)
 status.BackgroundTransparency = 1
 status.Text = "Statut: prêt"
-status.TextXAlignment = Enum.TextXAlignment.Left
 status.TextColor3 = Color3.new(1,1,1)
+status.TextXAlignment = Enum.TextXAlignment.Left
 
-local killBtn = Instance.new("TextButton", frame)
-killBtn.Size = UDim2.new(0,140,0,36)
-killBtn.Position = UDim2.new(0,8,0,56)
-killBtn.Text = "Se Kill (best try)"
-killBtn.Font = Enum.Font.SourceSansBold
-killBtn.TextColor3 = Color3.new(1,1,1)
+local targetLabel = Instance.new("TextLabel", frame)
+targetLabel.Size = UDim2.new(0,150,0,18)
+targetLabel.Position = UDim2.new(0,10,0,56)
+targetLabel.BackgroundTransparency = 1
+targetLabel.Text = "Cible: Dummy (recommandé)"
+targetLabel.TextColor3 = Color3.new(1,1,1)
+targetLabel.Font = Enum.Font.SourceSans
+targetLabel.TextSize = 14
+targetLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-local dummyBtn = Instance.new("TextButton", frame)
-dummyBtn.Size = UDim2.new(0,140,0,36)
-dummyBtn.Position = UDim2.new(0,152,0,56)
-dummyBtn.Text = "Kill via Dummy"
-dummyBtn.Font = Enum.Font.SourceSansBold
-dummyBtn.TextColor3 = Color3.new(1,1,1)
+local toggleSelf = Instance.new("TextButton", frame)
+toggleSelf.Size = UDim2.new(0,140,0,30)
+toggleSelf.Position = UDim2.new(0,170,0,54)
+toggleSelf.Text = "Cibler: Dummy"
+toggleSelf.TextColor3 = Color3.new(1,1,1)
+toggleSelf.Font = Enum.Font.SourceSansBold
+toggleSelf.TextSize = 14
+
+local sendBtn = Instance.new("TextButton", frame)
+sendBtn.Size = UDim2.new(0,150,0,36)
+sendBtn.Position = UDim2.new(0,10,0,88)
+sendBtn.Text = "Envoyer (1x)"
+sendBtn.TextColor3 = Color3.new(1,1,1)
+sendBtn.Font = Enum.Font.SourceSansBold
+
+local autoBtn = Instance.new("TextButton", frame)
+autoBtn.Size = UDim2.new(0,150,0,36)
+autoBtn.Position = UDim2.new(0,160,0,88)
+autoBtn.Text = "Auto: Off"
+autoBtn.TextColor3 = Color3.new(1,1,1)
+autoBtn.Font = Enum.Font.SourceSansBold
 
 local closeBtn = Instance.new("TextButton", frame)
 closeBtn.Size = UDim2.new(1,-16,0,18)
-closeBtn.Position = UDim2.new(0,8,0,104)
+closeBtn.Position = UDim2.new(0,8,0,124)
 closeBtn.Text = "Fermer"
-closeBtn.Font = Enum.Font.SourceSans
 closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.Font = Enum.Font.SourceSans
 
--- Utility: get local humanoid
-local function getLocalHumanoid()
-    local char = player.Character or player.CharacterAdded:Wait()
-    return char and char:FindFirstChildOfClass("Humanoid")
-end
+-- Variables
+local targetIsSelf = false -- false => target Dummy, true => target self
+local autoRunning = false
+local autoInterval = 1.0 -- secondes (raisonnable)
 
--- Main: attempt to send the exact pattern you found (targetHumanoid, math.huge)
-local function sendPrimaryPattern(targetHum)
-    if not targetHum then return false, "targetHum nil" end
+-- Toggle target
+toggleSelf.MouseButton1Click:Connect(function()
+    targetIsSelf = not targetIsSelf
+    toggleSelf.Text = targetIsSelf and "Cibler: Moi" or "Cibler: Dummy"
+    targetLabel.Text = targetIsSelf and "Cible: Ton Humanoid (risqué)" or "Cible: Dummy (recommandé)"
+end)
+
+-- Fonction principale: envoie exactement (targetHumanoid, math.huge)
+local function sendExactPattern(targetHum)
+    if not targetHum or not targetHum:IsA("Humanoid") then
+        return false, "targetHum invalide"
+    end
     local ok, err = pcall(function()
         remote:FireServer(targetHum, math.huge)
     end)
     return ok, err
 end
 
--- Secondary: fallback pattern (dictionary style) if needed
-local function sendSecondaryPattern(targetHum)
-    if not targetHum then return false, "targetHum nil" end
-    local ok, err = pcall(function()
-        remote:FireServer("damage", { EnemyHumanoid = targetHum })
-    end)
-    return ok, err
-end
-
--- Try patterns in order and return whether any succeeded (pcall ok)
-local function trySendForHumanoid(targetHum)
-    local ok, err
-
-    -- 1) pattern matching your observed snippet
-    ok, err = sendPrimaryPattern(targetHum)
-    if ok then return true, "primary OK" end
-
-    -- 2) alternative often used in game code
-    ok, err = sendSecondaryPattern(targetHum)
-    if ok then return true, "secondary OK" end
-
-    -- 3) last attempt: simple FireServer(humanoid)
-    ok, err = pcall(function() remote:FireServer(targetHum) end)
-    if ok then return true, "simple OK" end
-
-    return false, ("all attempts failed; last err: "..tostring(err))
-end
-
--- Single clean kill attempt that prefers server-side registration
-local function doReliableKillOn(targetHum)
-    status.Text = "Statut: tentative serveur..."
-    local success, info = trySendForHumanoid(targetHum)
-    task.wait(0.2) -- laissons le serveur traiter
-    local localHum = getLocalHumanoid()
-    -- Si le serveur n'a pas tué (ou n'accepte pas l'auto-damage), on force côté client
-    if localHum and localHum.Health > 0 then
-        -- petit délai supplémentaire pour s'assurer que le serveur a eu le temps
-        task.wait(0.15)
-        if localHum.Health > 0 then
-            pcall(function() localHum.Health = 0 end)
-            status.Text = "Statut: fallback local (mort forcée)"
-            return
-        end
+-- Envoi simple
+sendBtn.MouseButton1Click:Connect(function()
+    sendBtn.Text = "Envoi..."
+    status.Text = "Statut: préparation..."
+    local targetHum
+    if targetIsSelf then
+        targetHum = getLocalHumanoid()
+    else
+        targetHum = findDummyHumanoid()
     end
-    status.Text = success and ("Statut: envoyé -> "..tostring(info)) or ("Statut: échec -> "..tostring(info))
-end
 
--- Button connections
-killBtn.MouseButton1Click:Connect(function()
-    killBtn.Text = "Envoi..."
-    local hum = getLocalHumanoid()
-    local ok, info = trySendForHumanoid(hum)
-    task.wait(0.25)
-    -- if server didn't apply damage, ensure local death
-    if hum and hum.Health > 0 then
-        pcall(function() hum.Health = 0 end)
-    end
-    status.Text = ok and ("Statut: envoyé ("..tostring(info)..")") or ("Statut: erreur ("..tostring(info)..")")
-    killBtn.Text = "Se Kill (best try)"
-end)
-
-dummyBtn.MouseButton1Click:Connect(function()
-    dummyBtn.Text = "Envoi à Dummy..."
-    local dummyHum = findDummyHumanoid()
-    if not dummyHum then
-        status.Text = "Statut: Dummy introuvable"
-        dummyBtn.Text = "Kill via Dummy"
+    if not targetHum then
+        status.Text = "Statut: cible introuvable"
+        sendBtn.Text = "Envoyer (1x)"
         return
     end
-    -- Envoie l'appel exactement comme dans ton extrait (DummyHumanoid, math.huge)
-    local ok, info = trySendForHumanoid(dummyHum)
-    status.Text = ok and ("Statut: envoyé à Dummy") or ("Statut: échec Dummy -> "..tostring(info))
-    dummyBtn.Text = "Kill via Dummy"
+
+    local ok, err = sendExactPattern(targetHum)
+    if ok then
+        status.Text = "Statut: envoi réussi (serveur reçu)"
+    else
+        status.Text = "Statut: échec envoi -> "..tostring(err)
+    end
+    sendBtn.Text = "Envoyer (1x)"
 end)
 
+-- Auto on/off
+autoBtn.MouseButton1Click:Connect(function()
+    if not autoRunning then
+        autoRunning = true
+        autoBtn.Text = "Auto: On"
+        status.Text = "Statut: auto démarré"
+        spawn(function()
+            while autoRunning do
+                local targetHum = targetIsSelf and getLocalHumanoid() or findDummyHumanoid()
+                if targetHum then
+                    local ok, err = sendExactPattern(targetHum)
+                    if not ok then
+                        status.Text = "Statut: erreur auto -> "..tostring(err)
+                        -- on stoppe auto si erreur persistante
+                        autoRunning = false
+                        autoBtn.Text = "Auto: Off"
+                        break
+                    else
+                        status.Text = "Statut: auto envoi..."
+                    end
+                else
+                    status.Text = "Statut: cible introuvable (auto stop)"
+                    autoRunning = false
+                    autoBtn.Text = "Auto: Off"
+                    break
+                end
+                task.wait(autoInterval)
+            end
+            if not autoRunning then status.Text = "Statut: auto arrêté" end
+        end)
+    else
+        autoRunning = false
+        autoBtn.Text = "Auto: Off"
+        status.Text = "Statut: auto arrêté"
+    end
+end)
+
+-- Close
 closeBtn.MouseButton1Click:Connect(function()
+    autoRunning = false
     screenGui:Destroy()
 end)
 
-status.Text = "Statut: prêt (envoi prioritaire: targetHum, math.huge)"
+-- Raccourci: clic droit pour augmenter/diminuer interval (optionnel)
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        -- clic droit => toggle interval between 1 and 0.5 for quick testing
+        autoInterval = (autoInterval == 1.0) and 0.5 or 1.0
+        status.Text = "Interval auto = "..tostring(autoInterval).."s"
+    end
+end)
+
+status.Text = "Statut: prêt — envoi exact: (targetHumanoid, math.huge)"
