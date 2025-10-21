@@ -3,10 +3,10 @@ repeat task.wait() until game:IsLoaded()
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Change this if the RemoteEvent is in a subfolder; currently we expect it directly under ReplicatedStorage
 local REMOTE_NAME = "jdskhfsIIIllliiIIIdchgdIiIIIlIlIli"
 local remote = ReplicatedStorage:WaitForChild(REMOTE_NAME, 10)
 if not remote then
@@ -14,217 +14,160 @@ if not remote then
     return
 end
 
--- UI creation
+-- Optional: path to the Dummy you showed earlier (change if different)
+local function findDummyHumanoid()
+    -- essaie de retrouver le Dummy utilisé dans ton snippet
+    local ok, map = pcall(function() return Workspace:WaitForChild("MAP",1) end)
+    if not ok or not map then return nil end
+    local ok2, dummies = pcall(function() return map:FindFirstChild("5k_dummies") end)
+    if not ok2 or not dummies then return nil end
+    local dummy = dummies:FindFirstChild("Dummy2") or dummies:GetChildren()[1]
+    if dummy and dummy:FindFirstChildOfClass("Humanoid") then
+        return dummy:FindFirstChildOfClass("Humanoid")
+    end
+    return nil
+end
+
+-- UI (simple)
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SelfKillGUI"
+screenGui.Name = "ReliableKillGUI"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 140)
-frame.Position = UDim2.new(0.5, -130, 0.5, -70)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-frame.BorderSizePixel = 1
-frame.Parent = screenGui
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 300, 0, 140)
+frame.Position = UDim2.new(0.5, -150, 0.5, -70)
+frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
 
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 24)
-title.Position = UDim2.new(0, 0, 0, 0)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,24)
 title.BackgroundTransparency = 1
-title.Text = "Self Kill (utilise ta Remote)"
+title.Text = "Kill (Remote: "..REMOTE_NAME..")"
 title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 16
-title.Parent = frame
 
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, -10, 0, 20)
-statusLabel.Position = UDim2.new(0, 5, 0, 26)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Statut: prêt"
-statusLabel.TextColor3 = Color3.new(1,1,1)
-statusLabel.Font = Enum.Font.SourceSans
-statusLabel.TextSize = 14
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = frame
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1,-10,0,20)
+status.Position = UDim2.new(0,5,0,28)
+status.BackgroundTransparency = 1
+status.Text = "Statut: prêt"
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.TextColor3 = Color3.new(1,1,1)
 
-local killButton = Instance.new("TextButton")
-killButton.Size = UDim2.new(0, 120, 0, 34)
-killButton.Position = UDim2.new(0, 8, 0, 52)
-killButton.Text = "Se Kill"
-killButton.TextColor3 = Color3.new(1,1,1)
-killButton.Font = Enum.Font.SourceSansBold
-killButton.TextSize = 14
-killButton.Parent = frame
+local killBtn = Instance.new("TextButton", frame)
+killBtn.Size = UDim2.new(0,140,0,36)
+killBtn.Position = UDim2.new(0,8,0,56)
+killBtn.Text = "Se Kill (best try)"
+killBtn.Font = Enum.Font.SourceSansBold
+killBtn.TextColor3 = Color3.new(1,1,1)
 
-local autoButton = Instance.new("TextButton")
-autoButton.Size = UDim2.new(0, 120, 0, 34)
-autoButton.Position = UDim2.new(0, 132, 0, 52)
-autoButton.Text = "Auto: Off"
-autoButton.TextColor3 = Color3.new(1,1,1)
-autoButton.Font = Enum.Font.SourceSansBold
-autoButton.TextSize = 14
-autoButton.Parent = frame
+local dummyBtn = Instance.new("TextButton", frame)
+dummyBtn.Size = UDim2.new(0,140,0,36)
+dummyBtn.Position = UDim2.new(0,152,0,56)
+dummyBtn.Text = "Kill via Dummy"
+dummyBtn.Font = Enum.Font.SourceSansBold
+dummyBtn.TextColor3 = Color3.new(1,1,1)
 
-local intervalLabel = Instance.new("TextLabel")
-intervalLabel.Size = UDim2.new(0, 120, 0, 20)
-intervalLabel.Position = UDim2.new(0, 8, 0, 92)
-intervalLabel.BackgroundTransparency = 1
-intervalLabel.Text = "Interval (s):"
-intervalLabel.TextColor3 = Color3.new(1,1,1)
-intervalLabel.Font = Enum.Font.SourceSans
-intervalLabel.TextSize = 14
-intervalLabel.TextXAlignment = Enum.TextXAlignment.Left
-intervalLabel.Parent = frame
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(1,-16,0,18)
+closeBtn.Position = UDim2.new(0,8,0,104)
+closeBtn.Text = "Fermer"
+closeBtn.Font = Enum.Font.SourceSans
+closeBtn.TextColor3 = Color3.new(1,1,1)
 
-local intervalBox = Instance.new("TextBox")
-intervalBox.Size = UDim2.new(0, 120, 0, 20)
-intervalBox.Position = UDim2.new(0, 132, 0, 92)
-intervalBox.Text = "1.0" -- valeur par défaut (1 seconde)
-intervalBox.ClearTextOnFocus = false
-intervalBox.TextColor3 = Color3.new(1,1,1)
-intervalBox.Font = Enum.Font.SourceSans
-intervalBox.TextSize = 14
-intervalBox.Parent = frame
-
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(1, -16, 0, 18)
-closeButton.Position = UDim2.new(0, 8, 0, 116)
-closeButton.Text = "Fermer"
-closeButton.TextColor3 = Color3.new(1,1,1)
-closeButton.Font = Enum.Font.SourceSans
-closeButton.TextSize = 14
-closeButton.Parent = frame
-
--- Helper: get local humanoid (wait for character if needed)
+-- Utility: get local humanoid
 local function getLocalHumanoid()
     local char = player.Character or player.CharacterAdded:Wait()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
--- Attempts to call the remote using several common argument patterns.
--- Retourne true si un envoi s'est bien effectué (pcall ok).
-local function tryFireWithPatterns(hum)
-    if not hum then return false end
-    local patterns = {
-        -- pattern 1: (Humanoid, damage)
-        {hum, math.huge},
-        -- pattern 2: ("damage", { EnemyHumanoid = Humanoid })
-        {"damage", { EnemyHumanoid = hum }},
-        -- pattern 3: (Humanoid) simple
-        {hum},
-    }
-
-    local anyOk = false
-    for _, pat in ipairs(patterns) do
-        local ok, err = pcall(function()
-            remote:FireServer(unpack(pat))
-        end)
-        if ok then
-            anyOk = true
-            -- courte pause entre tentatives pour éviter flood instantané
-            task.wait(0.15)
-        else
-            -- on log l'erreur pour debug (non bloquant)
-            warn("FireServer failed for pattern:", unpack(pat), "err:", err)
-            task.wait(0.15)
-        end
-    end
-    return anyOk
-end
-
--- Fonction qui tente de se kill proprement (une fois)
-local function selfKillOnce()
-    local hum = getLocalHumanoid()
-    if not hum then
-        statusLabel.Text = "Statut: humanoid introuvable"
-        return
-    end
-
-    statusLabel.Text = "Statut: envoi damage..."
-    local fired = tryFireWithPatterns(hum)
-
-    -- petit délai pour laisser serveur traiter
-    task.wait(0.25)
-
-    -- fallback : forcer la mort côté client si nécessaire
-    if hum and hum.Health > 0 then
-        pcall(function() hum.Health = 0 end)
-    end
-
-    statusLabel.Text = "Statut: terminé"
-    return fired
-end
-
--- Auto kill loop control
-local autoRunning = false
-local autoThread = nil
-
-local function startAuto(interval)
-    if autoRunning then return end
-    autoRunning = true
-    autoButton.Text = "Auto: On"
-    statusLabel.Text = "Statut: auto running"
-
-    autoThread = task.spawn(function()
-        while autoRunning do
-            local success = pcall(selfKillOnce)
-            if not success then
-                warn("Erreur dans selfKillOnce")
-            end
-            local s = tonumber(intervalBox.Text) or interval
-            if s < 0.05 then s = 0.05 end -- sécurité minimum
-            task.wait(s)
-        end
-        statusLabel.Text = "Statut: auto stopped"
+-- Main: attempt to send the exact pattern you found (targetHumanoid, math.huge)
+local function sendPrimaryPattern(targetHum)
+    if not targetHum then return false, "targetHum nil" end
+    local ok, err = pcall(function()
+        remote:FireServer(targetHum, math.huge)
     end)
+    return ok, err
 end
 
-local function stopAuto()
-    if not autoRunning then return end
-    autoRunning = false
-    autoButton.Text = "Auto: Off"
+-- Secondary: fallback pattern (dictionary style) if needed
+local function sendSecondaryPattern(targetHum)
+    if not targetHum then return false, "targetHum nil" end
+    local ok, err = pcall(function()
+        remote:FireServer("damage", { EnemyHumanoid = targetHum })
+    end)
+    return ok, err
+end
+
+-- Try patterns in order and return whether any succeeded (pcall ok)
+local function trySendForHumanoid(targetHum)
+    local ok, err
+
+    -- 1) pattern matching your observed snippet
+    ok, err = sendPrimaryPattern(targetHum)
+    if ok then return true, "primary OK" end
+
+    -- 2) alternative often used in game code
+    ok, err = sendSecondaryPattern(targetHum)
+    if ok then return true, "secondary OK" end
+
+    -- 3) last attempt: simple FireServer(humanoid)
+    ok, err = pcall(function() remote:FireServer(targetHum) end)
+    if ok then return true, "simple OK" end
+
+    return false, ("all attempts failed; last err: "..tostring(err))
+end
+
+-- Single clean kill attempt that prefers server-side registration
+local function doReliableKillOn(targetHum)
+    status.Text = "Statut: tentative serveur..."
+    local success, info = trySendForHumanoid(targetHum)
+    task.wait(0.2) -- laissons le serveur traiter
+    local localHum = getLocalHumanoid()
+    -- Si le serveur n'a pas tué (ou n'accepte pas l'auto-damage), on force côté client
+    if localHum and localHum.Health > 0 then
+        -- petit délai supplémentaire pour s'assurer que le serveur a eu le temps
+        task.wait(0.15)
+        if localHum.Health > 0 then
+            pcall(function() localHum.Health = 0 end)
+            status.Text = "Statut: fallback local (mort forcée)"
+            return
+        end
+    end
+    status.Text = success and ("Statut: envoyé -> "..tostring(info)) or ("Statut: échec -> "..tostring(info))
 end
 
 -- Button connections
-killButton.MouseButton1Click:Connect(function()
-    killButton.Text = "En cours..."
-    selfKillOnce()
-    killButton.Text = "Se Kill"
-end)
-
-autoButton.MouseButton1Click:Connect(function()
-    if not autoRunning then
-        local defaultInterval = 1.0
-        local val = tonumber(intervalBox.Text)
-        if not val or val <= 0 then
-            intervalBox.Text = tostring(defaultInterval)
-            val = defaultInterval
-        end
-        startAuto(val)
-    else
-        stopAuto()
+killBtn.MouseButton1Click:Connect(function()
+    killBtn.Text = "Envoi..."
+    local hum = getLocalHumanoid()
+    local ok, info = trySendForHumanoid(hum)
+    task.wait(0.25)
+    -- if server didn't apply damage, ensure local death
+    if hum and hum.Health > 0 then
+        pcall(function() hum.Health = 0 end)
     end
+    status.Text = ok and ("Statut: envoyé ("..tostring(info)..")") or ("Statut: erreur ("..tostring(info)..")")
+    killBtn.Text = "Se Kill (best try)"
 end)
 
-closeButton.MouseButton1Click:Connect(function()
+dummyBtn.MouseButton1Click:Connect(function()
+    dummyBtn.Text = "Envoi à Dummy..."
+    local dummyHum = findDummyHumanoid()
+    if not dummyHum then
+        status.Text = "Statut: Dummy introuvable"
+        dummyBtn.Text = "Kill via Dummy"
+        return
+    end
+    -- Envoie l'appel exactement comme dans ton extrait (DummyHumanoid, math.huge)
+    local ok, info = trySendForHumanoid(dummyHum)
+    status.Text = ok and ("Statut: envoyé à Dummy") or ("Statut: échec Dummy -> "..tostring(info))
+    dummyBtn.Text = "Kill via Dummy"
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
     screenGui:Destroy()
-    autoRunning = false
 end)
 
--- Prevent typing in box from removing focus weirdly
-intervalBox.FocusLost:Connect(function(enterPressed)
-    local v = tonumber(intervalBox.Text)
-    if not v or v <= 0 then
-        intervalBox.Text = "1.0"
-    else
-        -- clamp reasonable bounds
-        if v < 0.05 then v = 0.05 end
-        if v > 10 then v = 10 end
-        intervalBox.Text = tostring(v)
-    end
-end)
-
--- Ready
-statusLabel.Text = "Statut: prêt (Remote trouvé)"
-
+status.Text = "Statut: prêt (envoi prioritaire: targetHum, math.huge)"
