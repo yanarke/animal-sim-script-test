@@ -1,84 +1,111 @@
---// Script Hub Pro - by ChatGPT
--- Place dans StarterGui > LocalScript
+--// ProHub v2 - Script Hub Multi-Onglets
+--// Créé par ChatGPT 🧠
 
 local player = game.Players.LocalPlayer
+local char = player.Character or player.CharacterAdded:Wait()
+local humanoid = char:WaitForChild("Humanoid")
 
 -- ScreenGui
 local gui = Instance.new("ScreenGui")
-gui.Name = "ProHub"
+gui.Name = "ProHubV2"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame principale
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 420)
-frame.Position = UDim2.new(0.5, -170, 0.5, -210)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
-frame.Parent = gui
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -210)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = gui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 14)
-corner.Parent = frame
-
--- Ombre
-local shadow = Instance.new("ImageLabel")
-shadow.Name = "Shadow"
-shadow.Image = "rbxassetid://1316045217"
-shadow.ImageTransparency = 0.5
-shadow.ScaleType = Enum.ScaleType.Slice
-shadow.SliceCenter = Rect.new(10,10,118,118)
-shadow.Size = UDim2.new(1, 40, 1, 40)
-shadow.Position = UDim2.new(0, -20, 0, -20)
-shadow.BackgroundTransparency = 1
-shadow.ZIndex = 0
-shadow.Parent = frame
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
 
 -- Titre
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -50, 0, 40)
-title.Position = UDim2.new(0, 20, 0, 0)
+title.Size = UDim2.new(1, -40, 0, 40)
+title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "🚀 Pro Hub"
+title.Text = "🚀 ProHub v2"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
 title.TextScaled = true
-title.Parent = frame
+title.Parent = mainFrame
 
--- Bouton fermer
+-- Bouton Fermer
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -40, 0, 5)
+closeBtn.Position = UDim2.new(1, -35, 0, 5)
 closeBtn.BackgroundTransparency = 1
 closeBtn.Text = "✖"
-closeBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
+closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextScaled = true
-closeBtn.Parent = frame
+closeBtn.Parent = mainFrame
 closeBtn.MouseButton1Click:Connect(function()
-	frame:Destroy()
+	mainFrame:Destroy()
 end)
 
--- ScrollingFrame
-local scroll = Instance.new("ScrollingFrame")
-scroll.Size = UDim2.new(1, -20, 1, -60)
-scroll.Position = UDim2.new(0, 10, 0, 50)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 6
-scroll.CanvasSize = UDim2.new(0, 0, 0, 600)
-scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
-scroll.Parent = frame
+-- Sidebar (onglets)
+local sideBar = Instance.new("Frame")
+sideBar.Size = UDim2.new(0, 110, 1, -45)
+sideBar.Position = UDim2.new(0, 0, 0, 45)
+sideBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+sideBar.BorderSizePixel = 0
+sideBar.Parent = mainFrame
 
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 8)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.VerticalAlignment = Enum.VerticalAlignment.Top
-layout.Parent = scroll
+local sideCorner = Instance.new("UICorner")
+sideCorner.CornerRadius = UDim.new(0, 10)
+sideCorner.Parent = sideBar
 
--- Fonction helper pour créer les boutons
-local function createButton(name, color, func)
+local sideLayout = Instance.new("UIListLayout")
+sideLayout.Padding = UDim.new(0, 5)
+sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+sideLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+sideLayout.Parent = sideBar
+
+-- Container principal
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1, -130, 1, -60)
+container.Position = UDim2.new(0, 120, 0, 55)
+container.BackgroundTransparency = 1
+container.Parent = mainFrame
+
+-- Fonction utilitaire pour créer des pages
+local pages = {}
+
+local function createPage(name)
+	local page = Instance.new("ScrollingFrame")
+	page.Visible = false
+	page.Size = UDim2.new(1, 0, 1, 0)
+	page.BackgroundTransparency = 1
+	page.ScrollBarThickness = 6
+	page.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
+	page.CanvasSize = UDim2.new(0, 0, 0, 600)
+	page.Parent = container
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 8)
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.Parent = page
+
+	pages[name] = page
+	return page
+end
+
+-- Créer les pages
+local homePage = createPage("Accueil")
+local playerPage = createPage("Joueur")
+local funPage = createPage("Fun")
+local utilsPage = createPage("Utilitaires")
+
+-- Fonction pour créer un bouton
+local function createButton(parent, name, color, callback)
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(0.9, 0, 0, 40)
 	btn.BackgroundColor3 = color
@@ -86,75 +113,104 @@ local function createButton(name, color, func)
 	btn.Font = Enum.Font.GothamMedium
 	btn.TextScaled = true
 	btn.Text = name
-	btn.AutoButtonColor = true
-	btn.Parent = scroll
+	btn.Parent = parent
 
-	local bcorner = Instance.new("UICorner")
-	bcorner.CornerRadius = UDim.new(0, 10)
-	bcorner.Parent = btn
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 8)
+	corner.Parent = btn
 
 	btn.MouseEnter:Connect(function()
-		btn.BackgroundColor3 = color:Lerp(Color3.fromRGB(255, 255, 255), 0.1)
+		btn.BackgroundColor3 = color:Lerp(Color3.fromRGB(255, 255, 255), 0.15)
 	end)
 	btn.MouseLeave:Connect(function()
 		btn.BackgroundColor3 = color
 	end)
 
-	btn.MouseButton1Click:Connect(func)
+	btn.MouseButton1Click:Connect(callback)
 end
 
---// Boutons et leurs fonctions
-createButton("🧍 Changer d'Équipe", Color3.fromRGB(0, 170, 255), function()
-	print("🔹 Changement d'équipe déclenché !")
+-- Créer les onglets
+local currentPage = homePage
+
+local function createTab(name, page)
+	local tab = Instance.new("TextButton")
+	tab.Size = UDim2.new(0.9, 0, 0, 35)
+	tab.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+	tab.Text = name
+	tab.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tab.Font = Enum.Font.GothamMedium
+	tab.TextScaled = true
+	tab.Parent = sideBar
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 6)
+	corner.Parent = tab
+
+	tab.MouseButton1Click:Connect(function()
+		for _, p in pairs(pages) do p.Visible = false end
+		page.Visible = true
+		currentPage = page
+	end)
+end
+
+-- Tabs setup
+createTab("🏠 Accueil", homePage)
+createTab("👤 Joueur", playerPage)
+createTab("🎮 Fun", funPage)
+createTab("🧰 Utilitaires", utilsPage)
+homePage.Visible = true
+
+-- 🔹 Accueil
+createButton(homePage, "Bienvenue sur ProHub v2", Color3.fromRGB(0, 170, 255), function()
+	print("Bienvenue dans ton hub pro 🚀")
 end)
 
-createButton("💰 AutoFarm", Color3.fromRGB(0, 200, 100), function()
-	print("💸 AutoFarm activé !")
+-- 👤 Joueur
+createButton(playerPage, "Vitesse x2", Color3.fromRGB(0, 200, 100), function()
+	humanoid.WalkSpeed = 32
 end)
 
-createButton("⚡ Speed Boost", Color3.fromRGB(255, 200, 0), function()
-	local char = player.Character or player.CharacterAdded:Wait()
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if hum then hum.WalkSpeed = 40 end
+createButton(playerPage, "Vitesse normale", Color3.fromRGB(255, 200, 0), function()
+	humanoid.WalkSpeed = 16
 end)
 
-createButton("🦋 Fly Mode", Color3.fromRGB(180, 0, 255), function()
-	print("🦋 Fly mode (placeholder)")
+createButton(playerPage, "Saut x2", Color3.fromRGB(0, 150, 255), function()
+	humanoid.JumpPower = 100
 end)
 
-createButton("🌈 Rainbow Character", Color3.fromRGB(255, 60, 120), function()
-	local char = player.Character
-	if char then
-		for _, part in ipairs(char:GetChildren()) do
-			if part:IsA("BasePart") then
-				game:GetService("TweenService"):Create(part, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Color = Color3.new(math.random(), math.random(), math.random())}):Play()
-			end
+createButton(playerPage, "Reset Stats", Color3.fromRGB(255, 80, 80), function()
+	humanoid.WalkSpeed = 16
+	humanoid.JumpPower = 50
+end)
+
+-- 🎮 Fun
+createButton(funPage, "Couleur Arc-en-ciel", Color3.fromRGB(255, 60, 120), function()
+	for _, part in ipairs(char:GetChildren()) do
+		if part:IsA("BasePart") then
+			game:GetService("TweenService"):Create(part, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Color = Color3.new(math.random(), math.random(), math.random())}):Play()
 		end
 	end
 end)
 
-createButton("📦 Give Tool", Color3.fromRGB(0, 255, 150), function()
-	print("🧰 Give tool (placeholder)")
+createButton(funPage, "Danse (animation placeholder)", Color3.fromRGB(200, 0, 255), function()
+	print("💃 Danse activée ! (à toi de mettre l’animation)")
 end)
 
-createButton("🎮 ESP Mode", Color3.fromRGB(255, 100, 0), function()
-	print("👀 ESP activé (placeholder)")
-end)
-
-createButton("🧠 Anti-AFK", Color3.fromRGB(100, 255, 200), function()
+-- 🧰 Utilitaires
+createButton(utilsPage, "Anti-AFK", Color3.fromRGB(0, 255, 200), function()
 	local vu = game:GetService("VirtualUser")
 	player.Idled:Connect(function()
 		vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 		task.wait(1)
 		vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 	end)
-	print("💤 Anti-AFK prêt")
+	print("💤 Anti-AFK activé !")
 end)
 
-createButton("🎵 Play Music", Color3.fromRGB(80, 180, 255), function()
-	print("🎵 Musique lancée (placeholder)")
-end)
-
-createButton("🧹 Clear UI", Color3.fromRGB(255, 80, 80), function()
+createButton(utilsPage, "Nettoyer l'écran", Color3.fromRGB(255, 100, 100), function()
 	gui:Destroy()
+end)
+
+createButton(utilsPage, "Afficher les FPS", Color3.fromRGB(100, 255, 100), function()
+	print("FPS: " .. math.floor(1 / game:GetService("RunService").RenderStepped:Wait()))
 end)
