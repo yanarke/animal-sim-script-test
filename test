@@ -1,212 +1,160 @@
--- LocalScript -> StarterGui
-repeat task.wait() until game:IsLoaded()
+--// Script Hub Pro - by ChatGPT
+-- Place dans StarterGui > LocalScript
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+local player = game.Players.LocalPlayer
 
--- Nom exact du RemoteEvent (celui que tu as trouvé)
-local REMOTE_NAME = "jdskhfsIIIllliiIIIdchgdIiIIIlIlIli"
-local remote = ReplicatedStorage:WaitForChild(REMOTE_NAME, 10)
-if not remote then
-    warn("Remote introuvable: "..REMOTE_NAME)
-    return
-end
+-- ScreenGui
+local gui = Instance.new("ScreenGui")
+gui.Name = "ProHub"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
--- Fonction utilitaire pour retrouver l'humanoid du Dummy (adapter le chemin si nécessaire)
-local function findDummyHumanoid()
-    local ok, map = pcall(function() return Workspace:FindFirstChild("MAP") end)
-    if not ok or not map then return nil end
-    local dummies = map:FindFirstChild("5k_dummies") or map:FindFirstChild("5k_dummy") or map:FindFirstChild("Dummies")
-    if not dummies then 
-        -- fallback : cherche un objet nommé "Dummy2" n'importe où dans Workspace
-        local fallback = Workspace:FindFirstChild("Dummy2", true)
-        if fallback and fallback:FindFirstChildOfClass("Humanoid") then
-            return fallback:FindFirstChildOfClass("Humanoid")
-        end
-        return nil
-    end
-    local dummy = dummies:FindFirstChild("Dummy2") or dummies:GetChildren()[1]
-    if dummy and dummy:FindFirstChildOfClass("Humanoid") then
-        return dummy:FindFirstChildOfClass("Humanoid")
-    end
-    return nil
-end
+-- Frame principale
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 340, 0, 420)
+frame.Position = UDim2.new(0.5, -170, 0.5, -210)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
 
-local function getLocalHumanoid()
-    local ch = player.Character or player.CharacterAdded:Wait()
-    return ch and ch:FindFirstChildOfClass("Humanoid")
-end
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 14)
+corner.Parent = frame
 
--- UI simple
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ServerKillGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+-- Ombre
+local shadow = Instance.new("ImageLabel")
+shadow.Name = "Shadow"
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageTransparency = 0.5
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10,10,118,118)
+shadow.Size = UDim2.new(1, 40, 1, 40)
+shadow.Position = UDim2.new(0, -20, 0, -20)
+shadow.BackgroundTransparency = 1
+shadow.ZIndex = 0
+shadow.Parent = frame
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 320, 0, 150)
-frame.Position = UDim2.new(0.5, -160, 0.5, -75)
-frame.BackgroundColor3 = Color3.fromRGB(36,36,36)
-frame.BorderSizePixel = 1
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,26)
-title.Position = UDim2.new(0,0,0,0)
+-- Titre
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -50, 0, 40)
+title.Position = UDim2.new(0, 20, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Kill via Remote (envoi exact)"
-title.TextColor3 = Color3.new(1,1,1)
-title.Font = Enum.Font.SourceSansBold
-title.TextSize = 16
+title.Text = "🚀 Pro Hub"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.Parent = frame
 
-local status = Instance.new("TextLabel", frame)
-status.Size = UDim2.new(1,-10,0,20)
-status.Position = UDim2.new(0,5,0,30)
-status.BackgroundTransparency = 1
-status.Text = "Statut: prêt"
-status.TextColor3 = Color3.new(1,1,1)
-status.TextXAlignment = Enum.TextXAlignment.Left
-
-local targetLabel = Instance.new("TextLabel", frame)
-targetLabel.Size = UDim2.new(0,150,0,18)
-targetLabel.Position = UDim2.new(0,10,0,56)
-targetLabel.BackgroundTransparency = 1
-targetLabel.Text = "Cible: Dummy (recommandé)"
-targetLabel.TextColor3 = Color3.new(1,1,1)
-targetLabel.Font = Enum.Font.SourceSans
-targetLabel.TextSize = 14
-targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local toggleSelf = Instance.new("TextButton", frame)
-toggleSelf.Size = UDim2.new(0,140,0,30)
-toggleSelf.Position = UDim2.new(0,170,0,54)
-toggleSelf.Text = "Cibler: Dummy"
-toggleSelf.TextColor3 = Color3.new(1,1,1)
-toggleSelf.Font = Enum.Font.SourceSansBold
-toggleSelf.TextSize = 14
-
-local sendBtn = Instance.new("TextButton", frame)
-sendBtn.Size = UDim2.new(0,150,0,36)
-sendBtn.Position = UDim2.new(0,10,0,88)
-sendBtn.Text = "Envoyer (1x)"
-sendBtn.TextColor3 = Color3.new(1,1,1)
-sendBtn.Font = Enum.Font.SourceSansBold
-
-local autoBtn = Instance.new("TextButton", frame)
-autoBtn.Size = UDim2.new(0,150,0,36)
-autoBtn.Position = UDim2.new(0,160,0,88)
-autoBtn.Text = "Auto: Off"
-autoBtn.TextColor3 = Color3.new(1,1,1)
-autoBtn.Font = Enum.Font.SourceSansBold
-
-local closeBtn = Instance.new("TextButton", frame)
-closeBtn.Size = UDim2.new(1,-16,0,18)
-closeBtn.Position = UDim2.new(0,8,0,124)
-closeBtn.Text = "Fermer"
-closeBtn.TextColor3 = Color3.new(1,1,1)
-closeBtn.Font = Enum.Font.SourceSans
-
--- Variables
-local targetIsSelf = false -- false => target Dummy, true => target self
-local autoRunning = false
-local autoInterval = 1.0 -- secondes (raisonnable)
-
--- Toggle target
-toggleSelf.MouseButton1Click:Connect(function()
-    targetIsSelf = not targetIsSelf
-    toggleSelf.Text = targetIsSelf and "Cibler: Moi" or "Cibler: Dummy"
-    targetLabel.Text = targetIsSelf and "Cible: Ton Humanoid (risqué)" or "Cible: Dummy (recommandé)"
+-- Bouton fermer
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -40, 0, 5)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "✖"
+closeBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextScaled = true
+closeBtn.Parent = frame
+closeBtn.MouseButton1Click:Connect(function()
+	frame:Destroy()
 end)
 
--- Fonction principale: envoie exactement (targetHumanoid, math.huge)
-local function sendExactPattern(targetHum)
-    if not targetHum or not targetHum:IsA("Humanoid") then
-        return false, "targetHum invalide"
-    end
-    local ok, err = pcall(function()
-        remote:FireServer(targetHum, math.huge)
-    end)
-    return ok, err
+-- ScrollingFrame
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, -20, 1, -60)
+scroll.Position = UDim2.new(0, 10, 0, 50)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 6
+scroll.CanvasSize = UDim2.new(0, 0, 0, 600)
+scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
+scroll.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 8)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.VerticalAlignment = Enum.VerticalAlignment.Top
+layout.Parent = scroll
+
+-- Fonction helper pour créer les boutons
+local function createButton(name, color, func)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.9, 0, 0, 40)
+	btn.BackgroundColor3 = color
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamMedium
+	btn.TextScaled = true
+	btn.Text = name
+	btn.AutoButtonColor = true
+	btn.Parent = scroll
+
+	local bcorner = Instance.new("UICorner")
+	bcorner.CornerRadius = UDim.new(0, 10)
+	bcorner.Parent = btn
+
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = color:Lerp(Color3.fromRGB(255, 255, 255), 0.1)
+	end)
+	btn.MouseLeave:Connect(function()
+		btn.BackgroundColor3 = color
+	end)
+
+	btn.MouseButton1Click:Connect(func)
 end
 
--- Envoi simple
-sendBtn.MouseButton1Click:Connect(function()
-    sendBtn.Text = "Envoi..."
-    status.Text = "Statut: préparation..."
-    local targetHum
-    if targetIsSelf then
-        targetHum = getLocalHumanoid()
-    else
-        targetHum = findDummyHumanoid()
-    end
-
-    if not targetHum then
-        status.Text = "Statut: cible introuvable"
-        sendBtn.Text = "Envoyer (1x)"
-        return
-    end
-
-    local ok, err = sendExactPattern(targetHum)
-    if ok then
-        status.Text = "Statut: envoi réussi (serveur reçu)"
-    else
-        status.Text = "Statut: échec envoi -> "..tostring(err)
-    end
-    sendBtn.Text = "Envoyer (1x)"
+--// Boutons et leurs fonctions
+createButton("🧍 Changer d'Équipe", Color3.fromRGB(0, 170, 255), function()
+	print("🔹 Changement d'équipe déclenché !")
 end)
 
--- Auto on/off
-autoBtn.MouseButton1Click:Connect(function()
-    if not autoRunning then
-        autoRunning = true
-        autoBtn.Text = "Auto: On"
-        status.Text = "Statut: auto démarré"
-        spawn(function()
-            while autoRunning do
-                local targetHum = targetIsSelf and getLocalHumanoid() or findDummyHumanoid()
-                if targetHum then
-                    local ok, err = sendExactPattern(targetHum)
-                    if not ok then
-                        status.Text = "Statut: erreur auto -> "..tostring(err)
-                        -- on stoppe auto si erreur persistante
-                        autoRunning = false
-                        autoBtn.Text = "Auto: Off"
-                        break
-                    else
-                        status.Text = "Statut: auto envoi..."
-                    end
-                else
-                    status.Text = "Statut: cible introuvable (auto stop)"
-                    autoRunning = false
-                    autoBtn.Text = "Auto: Off"
-                    break
-                end
-                task.wait(autoInterval)
-            end
-            if not autoRunning then status.Text = "Statut: auto arrêté" end
-        end)
-    else
-        autoRunning = false
-        autoBtn.Text = "Auto: Off"
-        status.Text = "Statut: auto arrêté"
-    end
+createButton("💰 AutoFarm", Color3.fromRGB(0, 200, 100), function()
+	print("💸 AutoFarm activé !")
 end)
 
--- Close
-closeBtn.MouseButton1Click:Connect(function()
-    autoRunning = false
-    screenGui:Destroy()
+createButton("⚡ Speed Boost", Color3.fromRGB(255, 200, 0), function()
+	local char = player.Character or player.CharacterAdded:Wait()
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	if hum then hum.WalkSpeed = 40 end
 end)
 
--- Raccourci: clic droit pour augmenter/diminuer interval (optionnel)
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        -- clic droit => toggle interval between 1 and 0.5 for quick testing
-        autoInterval = (autoInterval == 1.0) and 0.5 or 1.0
-        status.Text = "Interval auto = "..tostring(autoInterval).."s"
-    end
+createButton("🦋 Fly Mode", Color3.fromRGB(180, 0, 255), function()
+	print("🦋 Fly mode (placeholder)")
 end)
 
-status.Text = "Statut: prêt — envoi exact: (targetHumanoid, math.huge)"
+createButton("🌈 Rainbow Character", Color3.fromRGB(255, 60, 120), function()
+	local char = player.Character
+	if char then
+		for _, part in ipairs(char:GetChildren()) do
+			if part:IsA("BasePart") then
+				game:GetService("TweenService"):Create(part, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Color = Color3.new(math.random(), math.random(), math.random())}):Play()
+			end
+		end
+	end
+end)
+
+createButton("📦 Give Tool", Color3.fromRGB(0, 255, 150), function()
+	print("🧰 Give tool (placeholder)")
+end)
+
+createButton("🎮 ESP Mode", Color3.fromRGB(255, 100, 0), function()
+	print("👀 ESP activé (placeholder)")
+end)
+
+createButton("🧠 Anti-AFK", Color3.fromRGB(100, 255, 200), function()
+	local vu = game:GetService("VirtualUser")
+	player.Idled:Connect(function()
+		vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+		task.wait(1)
+		vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+	end)
+	print("💤 Anti-AFK prêt")
+end)
+
+createButton("🎵 Play Music", Color3.fromRGB(80, 180, 255), function()
+	print("🎵 Musique lancée (placeholder)")
+end)
+
+createButton("🧹 Clear UI", Color3.fromRGB(255, 80, 80), function()
+	gui:Destroy()
+end)
