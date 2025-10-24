@@ -1,142 +1,227 @@
---// Services
+-- LocalScript (mettre dans StarterGui)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
-local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 
---// GUI Setup
+-- safety wait
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- GUI root
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "FreezeGui"
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.Parent = playerGui
 
+-- Frame (draggable custom to avoid deprecated Draggable usage)
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 220, 0, 160)
-Frame.Position = UDim2.new(0.5, -110, 0.5, -80)
+Frame.Size = UDim2.new(0, 240, 0, 160)
+Frame.Position = UDim2.new(0.5, -120, 0.5, -80)
 Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Frame.Active = true
-Frame.Draggable = true
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.Parent = ScreenGui
 
 local UICorner = Instance.new("UICorner", Frame)
-UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 30)
-Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.BackgroundTransparency = 1
 Title.Text = "Freeze / Anti-AFK"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
 Title.Parent = Frame
 
-local FreezeButton = Instance.new("TextButton")
-FreezeButton.Size = UDim2.new(0, 180, 0, 35)
-FreezeButton.Position = UDim2.new(0.5, -90, 0, 40)
-FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-FreezeButton.Text = "Freeze: OFF"
-FreezeButton.TextColor3 = Color3.new(1,1,1)
-FreezeButton.Font = Enum.Font.GothamBold
-FreezeButton.TextSize = 16
-FreezeButton.Parent = Frame
+local function makeButton(text, y)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, 200, 0, 36)
+	btn.Position = UDim2.new(0.5, -100, 0, y)
+	btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.Text = text
+	btn.Parent = Frame
+	local corner = Instance.new("UICorner", btn)
+	corner.CornerRadius = UDim.new(0,6)
+	return btn
+end
 
-local AntiAFKButton = Instance.new("TextButton")
-AntiAFKButton.Size = UDim2.new(0, 180, 0, 35)
-AntiAFKButton.Position = UDim2.new(0.5, -90, 0, 80)
-AntiAFKButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-AntiAFKButton.Text = "Anti-AFK: OFF"
-AntiAFKButton.TextColor3 = Color3.new(1,1,1)
-AntiAFKButton.Font = Enum.Font.GothamBold
-AntiAFKButton.TextSize = 16
-AntiAFKButton.Parent = Frame
+local FreezeButton = makeButton("Freeze: OFF", 36)
+local AntiAFKButton = makeButton("Anti-AFK: OFF", 80)
+local KillButton = makeButton("Kill Frame", 124)
 
-local KillButton = Instance.new("TextButton")
-KillButton.Size = UDim2.new(0, 180, 0, 30)
-KillButton.Position = UDim2.new(0.5, -90, 0, 120)
-KillButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-KillButton.Text = "Kill Frame"
-KillButton.TextColor3 = Color3.new(1,1,1)
-KillButton.Font = Enum.Font.GothamBold
-KillButton.TextSize = 16
-KillButton.Parent = Frame
+-- Notification label (apparition simple)
+local Notif = Instance.new("TextLabel")
+Notif.Size = UDim2.new(0, 200, 0, 36)
+Notif.Position = UDim2.new(0.5, -100, 0, -46)
+Notif.BackgroundTransparency = 0.25
+Notif.BackgroundColor3 = Color3.fromRGB(0,0,0)
+Notif.TextColor3 = Color3.new(1,1,1)
+Notif.Font = Enum.Font.Gotham
+Notif.TextSize = 14
+Notif.Visible = false
+Notif.Parent = Frame
+local notifCorner = Instance.new("UICorner", Notif); notifCorner.CornerRadius = UDim.new(0,6)
 
---// Variables
-local frozen = false
-local freezePosition = nil
-local antiAFKEnabled = false
-
---// Notification Function
-local function notify(title, text)
-	pcall(function()
-		StarterGui:SetCore("SendNotification", {
-			Title = title;
-			Text = text;
-			Duration = 3;
-		})
+local function showNotif(text, duration)
+	duration = duration or 2.5
+	Notif.Text = text
+	Notif.Visible = true
+	task.delay(duration, function()
+		Notif.Visible = false
 	end)
 end
 
---// Freeze Function
-FreezeButton.MouseButton1Click:Connect(function()
-	frozen = not frozen
-	local char = player.Character or player.CharacterAdded:Wait()
-	local root = char:WaitForChild("HumanoidRootPart")
+-- Drag handling (UserInputService)
+do
+	local dragging, dragInput, dragStart, startPos
+	local function update(input)
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
 
+	Frame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = Frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	Frame.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+end
+
+-- Variables freeze / anti-afk
+local frozen = false
+local freezeCFrame = nil
+
+local antiAfkEnabled = false
+local antiAfkConn -- to store the connection to Idled
+
+-- Helper to safely get root
+local function getRoot()
+	local char = player.Character
+	if not char then return nil end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	return root
+end
+
+-- Toggle freeze
+FreezeButton.MouseButton1Click:Connect(function()
+	local root = getRoot()
+	if not root then
+		showNotif("Pas de personnage trouvé", 2)
+		return
+	end
+
+	frozen = not frozen
 	if frozen then
-		freezePosition = root.CFrame
+		freezeCFrame = root.CFrame
 		FreezeButton.Text = "Freeze: ON"
-		FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-		notify("Freeze Activé ❄️", "Ton personnage est maintenant figé.")
+		FreezeButton.BackgroundColor3 = Color3.fromRGB(0,170,255)
+		showNotif("Freeze activé", 2)
 	else
-		freezePosition = nil
+		freezeCFrame = nil
 		FreezeButton.Text = "Freeze: OFF"
-		FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-		notify("Freeze Désactivé 🏃", "Tu peux de nouveau bouger.")
+		FreezeButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
+		showNotif("Freeze désactivé", 2)
 	end
 end)
 
---// Maintenir la position si freeze activé
-RunService.RenderStepped:Connect(function()
-	if frozen and freezePosition then
-		local char = player.Character
-		if char and char:FindFirstChild("HumanoidRootPart") then
-			local root = char.HumanoidRootPart
-			if (root.Position - freezePosition.Position).Magnitude > 0.1 then
-				root.CFrame = freezePosition
+-- Heartbeat loop pour maintenir la position (meilleur timing pour physique)
+RunService.Heartbeat:Connect(function()
+	if frozen and freezeCFrame then
+		local success, root = pcall(getRoot)
+		if success and root then
+			-- reposition only if moved significantly
+			if (root.Position - freezeCFrame.Position).Magnitude > 0.05 then
+				-- use CFrame assignment to avoid conflicts
+				root.CFrame = freezeCFrame
 			end
-			root.Velocity = Vector3.new(0, 0, 0)
-			root.RotVelocity = Vector3.new(0, 0, 0)
+			-- reset velocities
+			if root:FindFirstChild("Velocity") == nil then
+				-- Velocity is not a child, just set properties
+			end
+			root.Velocity = Vector3.new(0,0,0)
+			root.RotVelocity = Vector3.new(0,0,0)
 		end
 	end
 end)
 
---// Anti-AFK Logic
+-- Anti-AFK toggle using Player.Idled (reliable)
+local function enableAntiAfk()
+	if antiAfkEnabled then return end
+	antiAfkEnabled = true
+	AntiAFKButton.Text = "Anti-AFK: ON"
+	AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0,170,0)
+	showNotif("Anti-AFK activé", 2)
+
+	-- connect to Idled
+	antiAfkConn = player.Idled:Connect(function()
+		-- simulate input quickly
+		local vu = game:GetService("VirtualUser")
+		vu:Button2Down(Vector2.new(0,0))
+		task.wait(0.1)
+		vu:Button2Up(Vector2.new(0,0))
+	end)
+end
+
+local function disableAntiAfk()
+	if not antiAfkEnabled then return end
+	antiAfkEnabled = false
+	AntiAFKButton.Text = "Anti-AFK: OFF"
+	AntiAFKButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
+	showNotif("Anti-AFK désactivé", 2)
+	if antiAfkConn then
+		antiAfkConn:Disconnect()
+		antiAfkConn = nil
+	end
+end
+
 AntiAFKButton.MouseButton1Click:Connect(function()
-	antiAFKEnabled = not antiAFKEnabled
-
-	if antiAFKEnabled then
-		AntiAFKButton.Text = "Anti-AFK: ON"
-		AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-		notify("Anti-AFK ✅", "Tu ne seras plus kick pour inactivité.")
-
-		task.spawn(function()
-			while antiAFKEnabled do
-				VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-				task.wait(1)
-				VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-				task.wait(60) -- petit délai pour éviter de spam
-			end
-		end)
+	if antiAfkEnabled then
+		disableAntiAfk()
 	else
-		AntiAFKButton.Text = "Anti-AFK: OFF"
-		AntiAFKButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
-		notify("Anti-AFK ❌", "Le mode anti-AFK est désactivé.")
+		enableAntiAfk()
 	end
 end)
 
---// Kill GUI
+-- Kill button
 KillButton.MouseButton1Click:Connect(function()
-	notify("Interface supprimée", "Le menu Freeze a été fermé.")
+	showNotif("GUI fermé", 1.5)
+	disableAntiAfk()
 	ScreenGui:Destroy()
 end)
+
+-- Ensure UI updates if character respawns
+player.CharacterAdded:Connect(function(char)
+	-- small delay to let HumanoidRootPart be created
+	task.wait(0.2)
+	if frozen then
+		local root = getRoot()
+		if root then
+			freezeCFrame = root.CFrame
+		end
+	end
+end)
+
+-- Debug prints (facultatif, tu peux commenter)
+print("[FreezeGui] Loaded. LocalScript is running.")
