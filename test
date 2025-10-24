@@ -1,216 +1,142 @@
---// ProHub v2 - Script Hub Multi-Onglets
---// Créé par ChatGPT 🧠
+--// Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local StarterGui = game:GetService("StarterGui")
 
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local humanoid = char:WaitForChild("Humanoid")
+local player = Players.LocalPlayer
 
--- ScreenGui
-local gui = Instance.new("ScreenGui")
-gui.Name = "ProHubV2"
-gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+--// GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "FreezeGui"
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Frame principale
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 420)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -210)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = gui
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 160)
+Frame.Position = UDim2.new(0.5, -110, 0.5, -80)
+Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Frame.Active = true
+Frame.Draggable = true
+Frame.Parent = ScreenGui
 
-local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12)
-mainCorner.Parent = mainFrame
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 10)
 
--- Titre
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, -40, 0, 40)
-title.Position = UDim2.new(0, 15, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "🚀 ProHub v2"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextScaled = true
-title.Parent = mainFrame
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Title.Text = "Freeze / Anti-AFK"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 16
+Title.Parent = Frame
 
--- Bouton Fermer
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(1, -35, 0, 5)
-closeBtn.BackgroundTransparency = 1
-closeBtn.Text = "✖"
-closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextScaled = true
-closeBtn.Parent = mainFrame
-closeBtn.MouseButton1Click:Connect(function()
-	mainFrame:Destroy()
-end)
+local FreezeButton = Instance.new("TextButton")
+FreezeButton.Size = UDim2.new(0, 180, 0, 35)
+FreezeButton.Position = UDim2.new(0.5, -90, 0, 40)
+FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+FreezeButton.Text = "Freeze: OFF"
+FreezeButton.TextColor3 = Color3.new(1,1,1)
+FreezeButton.Font = Enum.Font.GothamBold
+FreezeButton.TextSize = 16
+FreezeButton.Parent = Frame
 
--- Sidebar (onglets)
-local sideBar = Instance.new("Frame")
-sideBar.Size = UDim2.new(0, 110, 1, -45)
-sideBar.Position = UDim2.new(0, 0, 0, 45)
-sideBar.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-sideBar.BorderSizePixel = 0
-sideBar.Parent = mainFrame
+local AntiAFKButton = Instance.new("TextButton")
+AntiAFKButton.Size = UDim2.new(0, 180, 0, 35)
+AntiAFKButton.Position = UDim2.new(0.5, -90, 0, 80)
+AntiAFKButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+AntiAFKButton.Text = "Anti-AFK: OFF"
+AntiAFKButton.TextColor3 = Color3.new(1,1,1)
+AntiAFKButton.Font = Enum.Font.GothamBold
+AntiAFKButton.TextSize = 16
+AntiAFKButton.Parent = Frame
 
-local sideCorner = Instance.new("UICorner")
-sideCorner.CornerRadius = UDim.new(0, 10)
-sideCorner.Parent = sideBar
+local KillButton = Instance.new("TextButton")
+KillButton.Size = UDim2.new(0, 180, 0, 30)
+KillButton.Position = UDim2.new(0.5, -90, 0, 120)
+KillButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+KillButton.Text = "Kill Frame"
+KillButton.TextColor3 = Color3.new(1,1,1)
+KillButton.Font = Enum.Font.GothamBold
+KillButton.TextSize = 16
+KillButton.Parent = Frame
 
-local sideLayout = Instance.new("UIListLayout")
-sideLayout.Padding = UDim.new(0, 5)
-sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-sideLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-sideLayout.Parent = sideBar
+--// Variables
+local frozen = false
+local freezePosition = nil
+local antiAFKEnabled = false
 
--- Container principal
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1, -130, 1, -60)
-container.Position = UDim2.new(0, 120, 0, 55)
-container.BackgroundTransparency = 1
-container.Parent = mainFrame
-
--- Fonction utilitaire pour créer des pages
-local pages = {}
-
-local function createPage(name)
-	local page = Instance.new("ScrollingFrame")
-	page.Visible = false
-	page.Size = UDim2.new(1, 0, 1, 0)
-	page.BackgroundTransparency = 1
-	page.ScrollBarThickness = 6
-	page.ScrollBarImageColor3 = Color3.fromRGB(0, 170, 255)
-	page.CanvasSize = UDim2.new(0, 0, 0, 600)
-	page.Parent = container
-
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 8)
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Top
-	layout.Parent = page
-
-	pages[name] = page
-	return page
-end
-
--- Créer les pages
-local homePage = createPage("Accueil")
-local playerPage = createPage("Joueur")
-local funPage = createPage("Fun")
-local utilsPage = createPage("Utilitaires")
-
--- Fonction pour créer un bouton
-local function createButton(parent, name, color, callback)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.9, 0, 0, 40)
-	btn.BackgroundColor3 = color
-	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-	btn.Font = Enum.Font.GothamMedium
-	btn.TextScaled = true
-	btn.Text = name
-	btn.Parent = parent
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = btn
-
-	btn.MouseEnter:Connect(function()
-		btn.BackgroundColor3 = color:Lerp(Color3.fromRGB(255, 255, 255), 0.15)
-	end)
-	btn.MouseLeave:Connect(function()
-		btn.BackgroundColor3 = color
-	end)
-
-	btn.MouseButton1Click:Connect(callback)
-end
-
--- Créer les onglets
-local currentPage = homePage
-
-local function createTab(name, page)
-	local tab = Instance.new("TextButton")
-	tab.Size = UDim2.new(0.9, 0, 0, 35)
-	tab.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-	tab.Text = name
-	tab.TextColor3 = Color3.fromRGB(255, 255, 255)
-	tab.Font = Enum.Font.GothamMedium
-	tab.TextScaled = true
-	tab.Parent = sideBar
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 6)
-	corner.Parent = tab
-
-	tab.MouseButton1Click:Connect(function()
-		for _, p in pairs(pages) do p.Visible = false end
-		page.Visible = true
-		currentPage = page
+--// Notification Function
+local function notify(title, text)
+	pcall(function()
+		StarterGui:SetCore("SendNotification", {
+			Title = title;
+			Text = text;
+			Duration = 3;
+		})
 	end)
 end
 
--- Tabs setup
-createTab("🏠 Accueil", homePage)
-createTab("👤 Joueur", playerPage)
-createTab("🎮 Fun", funPage)
-createTab("🧰 Utilitaires", utilsPage)
-homePage.Visible = true
+--// Freeze Function
+FreezeButton.MouseButton1Click:Connect(function()
+	frozen = not frozen
+	local char = player.Character or player.CharacterAdded:Wait()
+	local root = char:WaitForChild("HumanoidRootPart")
 
--- 🔹 Accueil
-createButton(homePage, "Bienvenue sur ProHub v2", Color3.fromRGB(0, 170, 255), function()
-	print("Bienvenue dans ton hub pro 🚀")
+	if frozen then
+		freezePosition = root.CFrame
+		FreezeButton.Text = "Freeze: ON"
+		FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+		notify("Freeze Activé ❄️", "Ton personnage est maintenant figé.")
+	else
+		freezePosition = nil
+		FreezeButton.Text = "Freeze: OFF"
+		FreezeButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+		notify("Freeze Désactivé 🏃", "Tu peux de nouveau bouger.")
+	end
 end)
 
--- 👤 Joueur
-createButton(playerPage, "Vitesse x2", Color3.fromRGB(0, 200, 100), function()
-	humanoid.WalkSpeed = 32
-end)
-
-createButton(playerPage, "Vitesse normale", Color3.fromRGB(255, 200, 0), function()
-	humanoid.WalkSpeed = 16
-end)
-
-createButton(playerPage, "Saut x2", Color3.fromRGB(0, 150, 255), function()
-	humanoid.JumpPower = 100
-end)
-
-createButton(playerPage, "Reset Stats", Color3.fromRGB(255, 80, 80), function()
-	humanoid.WalkSpeed = 16
-	humanoid.JumpPower = 50
-end)
-
--- 🎮 Fun
-createButton(funPage, "Couleur Arc-en-ciel", Color3.fromRGB(255, 60, 120), function()
-	for _, part in ipairs(char:GetChildren()) do
-		if part:IsA("BasePart") then
-			game:GetService("TweenService"):Create(part, TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true), {Color = Color3.new(math.random(), math.random(), math.random())}):Play()
+--// Maintenir la position si freeze activé
+RunService.RenderStepped:Connect(function()
+	if frozen and freezePosition then
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			local root = char.HumanoidRootPart
+			if (root.Position - freezePosition.Position).Magnitude > 0.1 then
+				root.CFrame = freezePosition
+			end
+			root.Velocity = Vector3.new(0, 0, 0)
+			root.RotVelocity = Vector3.new(0, 0, 0)
 		end
 	end
 end)
 
-createButton(funPage, "Danse (animation placeholder)", Color3.fromRGB(200, 0, 255), function()
-	print("💃 Danse activée ! (à toi de mettre l’animation)")
+--// Anti-AFK Logic
+AntiAFKButton.MouseButton1Click:Connect(function()
+	antiAFKEnabled = not antiAFKEnabled
+
+	if antiAFKEnabled then
+		AntiAFKButton.Text = "Anti-AFK: ON"
+		AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+		notify("Anti-AFK ✅", "Tu ne seras plus kick pour inactivité.")
+
+		task.spawn(function()
+			while antiAFKEnabled do
+				VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+				task.wait(1)
+				VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+				task.wait(60) -- petit délai pour éviter de spam
+			end
+		end)
+	else
+		AntiAFKButton.Text = "Anti-AFK: OFF"
+		AntiAFKButton.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+		notify("Anti-AFK ❌", "Le mode anti-AFK est désactivé.")
+	end
 end)
 
--- 🧰 Utilitaires
-createButton(utilsPage, "Anti-AFK", Color3.fromRGB(0, 255, 200), function()
-	local vu = game:GetService("VirtualUser")
-	player.Idled:Connect(function()
-		vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-		task.wait(1)
-		vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	end)
-	print("💤 Anti-AFK activé !")
-end)
-
-createButton(utilsPage, "Nettoyer l'écran", Color3.fromRGB(255, 100, 100), function()
-	gui:Destroy()
-end)
-
-createButton(utilsPage, "Afficher les FPS", Color3.fromRGB(100, 255, 100), function()
-	print("FPS: " .. math.floor(1 / game:GetService("RunService").RenderStepped:Wait()))
+--// Kill GUI
+KillButton.MouseButton1Click:Connect(function()
+	notify("Interface supprimée", "Le menu Freeze a été fermé.")
+	ScreenGui:Destroy()
 end)
