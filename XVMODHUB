@@ -1,4 +1,4 @@
---// UI HUB STYLE BLOX FRUITS + INF LEVEL + DAMAGE + EXP SYSTEM //--
+
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "aZE"
@@ -22,7 +22,7 @@ border.Parent = frame
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.BackgroundTransparency = 1
-title.Text = "Atomic Hub"
+title.Text = "XVMOD HUB"
 title.TextColor3 = Color3.fromRGB(0, 170, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -46,13 +46,13 @@ local credit = Instance.new("TextLabel")
 credit.Size = UDim2.new(1, 0, 0, 30)
 credit.Position = UDim2.new(0, 0, 0.85, 0)
 credit.BackgroundTransparency = 1
-credit.Text = "Made by Atomic"
+credit.Text = "Made by XVMOD"
 credit.TextColor3 = Color3.fromRGB(150, 150, 150)
 credit.TextScaled = true
 credit.Font = Enum.Font.Gotham
 credit.Parent = frame
 
--- SYSTEME INF LEVEL + DAMAGE + EXP
+
 local running = false
 
 button.MouseButton1Click:Connect(function()
@@ -63,25 +63,24 @@ button.MouseButton1Click:Connect(function()
         local player = game.Players.LocalPlayer
         if player then
 
-            -- LEVEL
+            
             if player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Level") then
                 local level = player.leaderstats.Level
                 level.Value += 8
 
-                -- DAMAGE = LEVEL * 2 + 1
+                
                 if player.leaderstats:FindFirstChild("Damage") then
                     player.leaderstats.Damage.Value = level.Value * 2 + 1
                 end
             end
 
-            -- EXP SYSTEM
             if player:FindFirstChild("Exp") then
                 local exp = player.Exp
 
-                -- +40% toutes les 0.2 secondes
+             
                 exp.Value = exp.Value + 40000000000
 
-                -- Si EXP dépasse 100 → reset
+               
                 if exp.Value >= 20000000000000000000 then
                     exp.Value = 0
                 end
