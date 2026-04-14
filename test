@@ -1,227 +1,93 @@
--- LocalScript (mettre dans StarterGui)
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+--// UI HUB STYLE BLOX FRUITS + INF LEVEL + DAMAGE + EXP SYSTEM //--
 
-local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "aZE"
+gui.ResetOnSpawn = false
+gui.Parent = game.CoreGui
 
--- safety wait
-local playerGui = player:WaitForChild("PlayerGui")
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 230)
+frame.Position = UDim2.new(0.5, -150, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = gui
 
--- GUI root
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FreezeGui"
-ScreenGui.Parent = playerGui
+local border = Instance.new("UIStroke")
+border.Thickness = 2
+border.Color = Color3.fromRGB(0, 170, 255)
+border.Parent = frame
 
--- Frame (draggable custom to avoid deprecated Draggable usage)
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 240, 0, 160)
-Frame.Position = UDim2.new(0.5, -120, 0.5, -80)
-Frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.Parent = ScreenGui
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "Atomic Hub"
+title.TextColor3 = Color3.fromRGB(0, 170, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
 
-local UICorner = Instance.new("UICorner", Frame)
-UICorner.CornerRadius = UDim.new(0, 8)
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0.8, 0, 0, 50)
+button.Position = UDim2.new(0.1, 0, 0.45, 0)
+button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+button.Text = "INF LEVEL"
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.TextScaled = true
+button.Font = Enum.Font.GothamBold
+button.Parent = frame
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundTransparency = 1
-Title.Text = "Freeze / Anti-AFK"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.Parent = Frame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 8)
+corner.Parent = button
 
-local function makeButton(text, y)
-	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0, 200, 0, 36)
-	btn.Position = UDim2.new(0.5, -100, 0, y)
-	btn.BackgroundColor3 = Color3.fromRGB(60,60,60)
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 14
-	btn.Text = text
-	btn.Parent = Frame
-	local corner = Instance.new("UICorner", btn)
-	corner.CornerRadius = UDim.new(0,6)
-	return btn
-end
+local credit = Instance.new("TextLabel")
+credit.Size = UDim2.new(1, 0, 0, 30)
+credit.Position = UDim2.new(0, 0, 0.85, 0)
+credit.BackgroundTransparency = 1
+credit.Text = "Made by Atomic"
+credit.TextColor3 = Color3.fromRGB(150, 150, 150)
+credit.TextScaled = true
+credit.Font = Enum.Font.Gotham
+credit.Parent = frame
 
-local FreezeButton = makeButton("Freeze: OFF", 36)
-local AntiAFKButton = makeButton("Anti-AFK: OFF", 80)
-local KillButton = makeButton("Kill Frame", 124)
+-- SYSTEME INF LEVEL + DAMAGE + EXP
+local running = false
 
--- Notification label (apparition simple)
-local Notif = Instance.new("TextLabel")
-Notif.Size = UDim2.new(0, 200, 0, 36)
-Notif.Position = UDim2.new(0.5, -100, 0, -46)
-Notif.BackgroundTransparency = 0.25
-Notif.BackgroundColor3 = Color3.fromRGB(0,0,0)
-Notif.TextColor3 = Color3.new(1,1,1)
-Notif.Font = Enum.Font.Gotham
-Notif.TextSize = 14
-Notif.Visible = false
-Notif.Parent = Frame
-local notifCorner = Instance.new("UICorner", Notif); notifCorner.CornerRadius = UDim.new(0,6)
+button.MouseButton1Click:Connect(function()
+    running = not running
+    button.Text = running and "INF LEVEL: ON" or "INF LEVEL"
 
-local function showNotif(text, duration)
-	duration = duration or 2.5
-	Notif.Text = text
-	Notif.Visible = true
-	task.delay(duration, function()
-		Notif.Visible = false
-	end)
-end
+    while running do
+        local player = game.Players.LocalPlayer
+        if player then
 
--- Drag handling (UserInputService)
-do
-	local dragging, dragInput, dragStart, startPos
-	local function update(input)
-		local delta = input.Position - dragStart
-		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
+            -- LEVEL
+            if player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Level") then
+                local level = player.leaderstats.Level
+                level.Value += 8
 
-	Frame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			dragging = true
-			dragStart = input.Position
-			startPos = Frame.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
-			end)
-		end
-	end)
+                -- DAMAGE = LEVEL * 2 + 1
+                if player.leaderstats:FindFirstChild("Damage") then
+                    player.leaderstats.Damage.Value = level.Value * 2 + 1
+                end
+            end
 
-	Frame.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			dragInput = input
-		end
-	end)
+            -- EXP SYSTEM
+            if player:FindFirstChild("Exp") then
+                local exp = player.Exp
 
-	UserInputService.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			update(input)
-		end
-	end)
-end
+                -- +40% toutes les 0.2 secondes
+                exp.Value = exp.Value + 40000000000
 
--- Variables freeze / anti-afk
-local frozen = false
-local freezeCFrame = nil
+                -- Si EXP dépasse 100 → reset
+                if exp.Value >= 20000000000000000000 then
+                    exp.Value = 0
+                end
+            end
+        end
 
-local antiAfkEnabled = false
-local antiAfkConn -- to store the connection to Idled
-
--- Helper to safely get root
-local function getRoot()
-	local char = player.Character
-	if not char then return nil end
-	local root = char:FindFirstChild("HumanoidRootPart")
-	return root
-end
-
--- Toggle freeze
-FreezeButton.MouseButton1Click:Connect(function()
-	local root = getRoot()
-	if not root then
-		showNotif("Pas de personnage trouvé", 2)
-		return
-	end
-
-	frozen = not frozen
-	if frozen then
-		freezeCFrame = root.CFrame
-		FreezeButton.Text = "Freeze: ON"
-		FreezeButton.BackgroundColor3 = Color3.fromRGB(0,170,255)
-		showNotif("Freeze activé", 2)
-	else
-		freezeCFrame = nil
-		FreezeButton.Text = "Freeze: OFF"
-		FreezeButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
-		showNotif("Freeze désactivé", 2)
-	end
+        task.wait(0.2)
+    end
 end)
-
--- Heartbeat loop pour maintenir la position (meilleur timing pour physique)
-RunService.Heartbeat:Connect(function()
-	if frozen and freezeCFrame then
-		local success, root = pcall(getRoot)
-		if success and root then
-			-- reposition only if moved significantly
-			if (root.Position - freezeCFrame.Position).Magnitude > 0.05 then
-				-- use CFrame assignment to avoid conflicts
-				root.CFrame = freezeCFrame
-			end
-			-- reset velocities
-			if root:FindFirstChild("Velocity") == nil then
-				-- Velocity is not a child, just set properties
-			end
-			root.Velocity = Vector3.new(0,0,0)
-			root.RotVelocity = Vector3.new(0,0,0)
-		end
-	end
-end)
-
--- Anti-AFK toggle using Player.Idled (reliable)
-local function enableAntiAfk()
-	if antiAfkEnabled then return end
-	antiAfkEnabled = true
-	AntiAFKButton.Text = "Anti-AFK: ON"
-	AntiAFKButton.BackgroundColor3 = Color3.fromRGB(0,170,0)
-	showNotif("Anti-AFK activé", 2)
-
-	-- connect to Idled
-	antiAfkConn = player.Idled:Connect(function()
-		-- simulate input quickly
-		local vu = game:GetService("VirtualUser")
-		vu:Button2Down(Vector2.new(0,0))
-		task.wait(0.1)
-		vu:Button2Up(Vector2.new(0,0))
-	end)
-end
-
-local function disableAntiAfk()
-	if not antiAfkEnabled then return end
-	antiAfkEnabled = false
-	AntiAFKButton.Text = "Anti-AFK: OFF"
-	AntiAFKButton.BackgroundColor3 = Color3.fromRGB(60,60,60)
-	showNotif("Anti-AFK désactivé", 2)
-	if antiAfkConn then
-		antiAfkConn:Disconnect()
-		antiAfkConn = nil
-	end
-end
-
-AntiAFKButton.MouseButton1Click:Connect(function()
-	if antiAfkEnabled then
-		disableAntiAfk()
-	else
-		enableAntiAfk()
-	end
-end)
-
--- Kill button
-KillButton.MouseButton1Click:Connect(function()
-	showNotif("GUI fermé", 1.5)
-	disableAntiAfk()
-	ScreenGui:Destroy()
-end)
-
--- Ensure UI updates if character respawns
-player.CharacterAdded:Connect(function(char)
-	-- small delay to let HumanoidRootPart be created
-	task.wait(0.2)
-	if frozen then
-		local root = getRoot()
-		if root then
-			freezeCFrame = root.CFrame
-		end
-	end
-end)
-
--- Debug prints (facultatif, tu peux commenter)
-print("[FreezeGui] Loaded. LocalScript is running.")
